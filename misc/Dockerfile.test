@@ -1,0 +1,23 @@
+FROM ruby:2.6-alpine
+
+WORKDIR /srv/app
+
+# setup dependencies
+RUN apk add --no-cache build-base postgresql-dev postgresql-client nodejs tzdata yarn
+
+# setup env
+ENV RAILS_ENV=test
+
+# setup gems
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+# setup frontend dependencies
+COPY package.json yarn.lock ./
+RUN yarn install
+
+# copy all project files
+COPY . .
+
+# set default command to run container
+CMD bundle exec rails test

@@ -1,0 +1,36 @@
+- hosts: all
+  tasks:
+  - name: Ensure required directories exist
+    file:
+      path: "{{ item }}"
+      state: directory
+    with_items:
+    - /srv/deployment
+    - /srv/data/postgres
+    - /srv/data/nginx/certs
+    - /srv/data/nginx/certs-validation
+
+  - name: Ensure docker-compose.yml
+    template:
+      src: templates/production/docker-compose.yml
+      dest: /srv/deployment/docker-compose.yml
+
+  - name: Ensure nginx.conf
+    template:
+      src: templates/production/nginx.conf
+      dest: /srv/deployment/nginx.conf
+    notify:
+    - Restart nginx
+
+  - name: Stack Deployment
+    shell: >
+      docker stack deploy \
+      --compose-file /srv/deployment/docker-compose.yml \
+      --prune \
+      --with-registry-auth \
+      production
+
+  handlers:
+  - name: Restart nginx
+    shell: "docker service update --force production_gateway"
+

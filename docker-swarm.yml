@@ -1,0 +1,43 @@
+- hosts: all
+  tasks:
+  - name: Update and upgrade apt packages
+    become: true
+    apt:
+      upgrade: yes
+      update_cache: yes
+  - name: Ensure required OS packages
+    apt:
+      name:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg2
+        - software-properties-common
+      state: present
+      update_cache: yes
+
+  - name: Enusre Docker GPG key added
+    apt_key:
+      id: "9DC858229FC7DD38854AE2D88D81803C0EBFCD88"
+      url: "https://download.docker.com/linux/ubuntu/gpg"
+      state: present
+
+  - name: Ensure Repository is added
+    apt_repository:
+      repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
+      state: present
+
+  - name: Ensure docker-ce
+    apt:
+      name: docker-ce
+      state: present
+      update_cache: yes
+
+  - name: Check Swarm Mode state.
+    shell: docker info
+    changed_when: False
+    register: docker_info
+
+  - name: Ensure swarm initialized
+    shell: "docker swarm init --listen-addr=127.0.0.1 --advertise-addr={{ ansible_default_ipv4.address }}"
+    when: "docker_info.stdout.find('Swarm: active') == -1"

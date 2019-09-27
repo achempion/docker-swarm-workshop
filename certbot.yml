@@ -1,0 +1,15 @@
+- hosts: all
+  tasks:
+  - name: Certbot challange
+    shell: >
+      docker run \
+        -v /srv/data/nginx/certs/:/etc/letsencrypt/ \
+        -v /srv/data/nginx/certs-validation/:/data/letsencrypt/ \
+        certbot/certbot \
+          certonly -n --agree-tos --webroot \
+          --webroot-path /data/letsencrypt \
+          --email your_email@example.com \
+          -d example.com
+    register: out
+
+  - debug: var=out.stdout_lines

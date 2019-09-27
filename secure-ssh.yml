@@ -1,0 +1,12 @@
+- hosts: all
+  tasks:
+  - name: Disallow password authentication
+    notify: Restart ssh
+    lineinfile: dest=/etc/ssh/sshd_config
+                regexp="^PasswordAuthentication"
+                line="PasswordAuthentication no"
+                state=present
+  handlers:
+  - name: Restart ssh
+    service: name=ssh state=restarted
+

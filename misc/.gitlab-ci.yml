@@ -1,0 +1,30 @@
+stages:
+  - test
+  - build
+  - deploy
+
+before_script:
+  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+
+test_image:
+  stage: test
+  script:
+    - docker build . -t blog--test:$CI_COMMIT_SHA -f Dockerfile.test
+    - docker run --net=host -e POSTGRESQL_HOSTNAME=localhost -e POSTGRESQL_USER=runner -e POSTGRESQL_PASSWORD=runner blog--test:$CI_COMMIT_SHA
+
+production--build:
+  stage: build
+  only:
+    - master
+  script:
+    - docker build . -t registry.gitlab.com/swarm-workshop/blog/production:$CI_COMMIT_SHA -f Dockerfile.prod
+    - docker tag registry.gitlab.com/swarm-workshop/blog/production:$CI_COMMIT_SHA registry.gitlab.com/swarm-workshop/blog/production:latest
+    - docker push registry.gitlab.com/swarm-workshop/blog/production:$CI_COMMIT_SHA
+    - docker push registry.gitlab.com/swarm-workshop/blog/production:latest
+
+production--deploy:
+  stage: deploy
+  only:
+    - master
+  script:
+    - ssh root@127.0.0.1 docker service update --image registry.gitlab.com/swarm-workshop/blog/production:$CI_COMMIT_SHA production_blog --with-registry-auth --update-order start-first

@@ -1,0 +1,66 @@
+- hosts: all
+  tasks:
+  - name: Update and upgrade apt packages
+    become: true
+    apt:
+      upgrade: yes
+      update_cache: yes
+
+  - name: Check if GitLab Runner is already installed
+    stat:
+      path: "/usr/local/bin/gitlab-runner"
+    register: gitlab_runner_file
+
+  - name: Download GitLab Runner
+    become: true
+    get_url:
+      url: "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64"
+      dest: "/usr/local/bin/gitlab-runner"
+    when: gitlab_runner_file.stat.exists == false
+
+  - name: Change perm of "/usr/local/bin/gitlab-runner", adding "+x"
+    become: true
+    file: dest=/usr/local/bin/gitlab-runner mode=a+x
+    when: gitlab_runner_file.stat.exists == false
+
+  - name: Ensure required OS packages
+    become: true
+    apt:
+      name:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg2
+        - software-properties-common
+      state: present
+      update_cache: yes
+
+  - name: Enusre Docker GPG key added
+    become: true
+    apt_key:
+      id: "9DC858229FC7DD38854AE2D88D81803C0EBFCD88"
+      url: "https://download.docker.com/linux/ubuntu/gpg"
+      state: present
+
+  - name: Ensure Repository is added
+    become: true
+    apt_repository:
+      repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_distribution_release}} stable"
+      state: present
+
+  - name: Ensure docker-ce
+    become: true
+    apt:
+      name: docker-ce
+      state: present
+      update_cache: yes
+
+  - name: Ensure postgresql
+    become: true
+    apt:
+      name:
+        - postgresql
+        - postgresql-client
+        - libpq-dev
+      state: present
+      update_cache: yes
